@@ -264,8 +264,7 @@ async def run(
     parsed = urlparse(urls[0])
     assert parsed.scheme in (
         "https",
-        "wss",
-    ), "Only https:// or wss:// URLs are supported."
+    ), "Only https:// URLs are supported."
     host = parsed.hostname
     if parsed.port is not None:
         port = parsed.port
@@ -302,12 +301,13 @@ async def run(
 
 def start_client(url, cid_len, version, alpn, dbg=False):
 
+    print("Client Starts")
+    
+
     logging.basicConfig(
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
         level= logging.DEBUG if dbg else logging.INFO,
     )
-
-    print(QuicProtocolVersion['LEET'].value)
 
     # Configuration
     configuration = QuicConfiguration(
@@ -315,17 +315,21 @@ def start_client(url, cid_len, version, alpn, dbg=False):
         supported_versions =  [QuicProtocolVersion[version].value],
         alpn_protocols=[alpn],
         verify_mode = ssl.CERT_NONE,
-        secrets_log_file = open("secrets/secrets.log" "a"),
+        secrets_log_file = open("secrets/secrets.log","a"),
         connection_id_length = cid_len,
     )
 
+    print(configuration)
+    print(url)
+
     if uvloop is not None:
         uvloop.install()
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     loop.run_until_complete(
         run(
             configuration=configuration,
-            urls=url,
+            urls=[url],
             data=None,
             include=True,
             output_dir="output/",
