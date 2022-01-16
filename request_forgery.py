@@ -165,6 +165,7 @@ def configure_client(args):
 
     url = "https://{victim_ip}:{victim_port}{path}".format(victim_ip=args.victim_ip, victim_port=args.victim_port, path=args.path)
     version = 'VNRF' if args.mode == "vn" else "VERSION_1"
+    cid_len = args.cid_len if "cid_len" in args else 20
 
     configuration = QuicConfiguration(
         is_client=True, 
@@ -172,7 +173,7 @@ def configure_client(args):
         alpn_protocols=[args.alpn],
         verify_mode = ssl.CERT_NONE,
         secrets_log_file = open("secrets/secrets.log","a"),
-        connection_id_length = args.cid_len,
+        connection_id_length = cid_len,
     )
     
     return url, configuration
