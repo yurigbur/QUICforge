@@ -32,26 +32,14 @@ import minimal_http_client as cl
 
 
 banner = '''
-                          ____  _    _ _____ _____                           
-                         / __ \| |  | |_   _/ ____|                          
-                        | |  | | |  | | | || |                               
-                        | |  | | |  | | | || |                               
-                        | |__| | |__| |_| || |____                           
-  _____                  \___\_\\____/|_____\_____|                          
- |  __ \                          | |   |  ____|                             
- | |__) |___  __ _ _   _  ___  ___| |_  | |__ ___  _ __ __ _  ___ _ __ _   _ 
- |  _  // _ \/ _` | | | |/ _ \/ __| __| |  __/ _ \| '__/ _` |/ _ \ '__| | | |
- | | \ \  __/ (_| | |_| |  __/\__ \ |_  | | | (_) | | | (_| |  __/ |  | |_| |
- |_|  \_\___|\__, |\__,_|\___||___/\__| |_|  \___/|_|  \__, |\___|_|   \__, |
-                | |                                     __/ |           __/ |
-               _|_|_             _       _____         |___/     _     |___/ 
-          /\  | | | |           | |     / ____|         (_)     | |          
-         /  \ | |_| |_ __ _  ___| | __ | (___   ___ _ __ _ _ __ | |_         
-        / /\ \| __| __/ _` |/ __| |/ /  \___ \ / __| '__| | '_ \| __|        
-       / ____ \ |_| || (_| | (__|   <   ____) | (__| |  | | |_) | |_         
-      /_/    \_\__|\__\__,_|\___|_|\_\ |_____/ \___|_|  |_| .__/ \__|        
-                                                          | |                
-                                                          |_|                
+   ____  _    _ _____ _____ ______
+  / __ \| |  | |_   _/ ____|  ____|
+ | |  | | |  | | | || |    | |__ ___  _ __ __ _  ___
+ | |  | | |  | | | || |    |  __/ _ \| '__/ _` |/ _ \\
+ | |__| | |__| |_| || |____| | | (_) | | | (_| |  __/
+  \___\_\\\\____/|_____\_____|_|  \___/|_|  \__, |\___|
+                                           __/ |
+                                          |___/
 '''
 
 SPOOFED_COUNT = 0
@@ -89,7 +77,7 @@ def parse_arguments():
     parser_vn = subparsers.add_parser('vn', help='Version negotiation mode', parents=[optparser], description=gen_desc + '\n Version Negotiation Mode', formatter_class=RawTextHelpFormatter)
     parser_vn._optionals.title = 'Optional Arguments'
     parser_vn._positionals.title = 'Required Arguments'
-    parser_vn.add_argument('--cid_len','-c', help='Length of the CID used in the initial message (currently SCID/DCID are the same length)', choices=range(1,256), metavar="[1-255]", type=int, default=20)
+    parser_vn.add_argument('--cid_len','-c', help='Length of the CID used in the initial message (currently SCID/DCID are the same length)', choices=range(0,256), metavar="[0-255]", type=int, default=20)
 
     #Parser for SIRF
     parser_si = subparsers.add_parser('si', help='Server initial mode', parents=[optparser], description=gen_desc + '\nServer Initial Mode', formatter_class=RawTextHelpFormatter)
