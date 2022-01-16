@@ -299,24 +299,11 @@ async def run(
         process_http_pushes(client=client, include=include, output_dir=output_dir)
 
 
-def start_client(url, cid_len, version, alpn, dbg=False):
-
-    print("Client Starts")
-    
+def start_client(url, configuration, dbg=False):
 
     logging.basicConfig(
         format="%(asctime)s %(levelname)s %(name)s %(message)s",
         level= logging.DEBUG if dbg else logging.INFO,
-    )
-
-    # Configuration
-    configuration = QuicConfiguration(
-        is_client=True, 
-        supported_versions =  [QuicProtocolVersion[version].value],
-        alpn_protocols=[alpn],
-        verify_mode = ssl.CERT_NONE,
-        secrets_log_file = open("secrets/secrets.log","a"),
-        connection_id_length = cid_len,
     )
 
     print(configuration)

