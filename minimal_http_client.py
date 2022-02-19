@@ -306,9 +306,6 @@ def start_client(url, configuration, dbg=False):
         level= logging.DEBUG if dbg else logging.INFO,
     )
 
-    print(configuration)
-    print(url)
-
     if uvloop is not None:
         uvloop.install()
     loop = asyncio.new_event_loop()
