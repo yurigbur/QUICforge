@@ -40,6 +40,50 @@ If the prerequisites are met the script should run out of the box
 	cmake -DBORINGSSL_DIR=$BORINGSSL .
 	make
 	```
+#### Changes to codbase to get a predictable CID of length 20
+
+- In `lsquic/include/lsquic.h`:
+	Change 
+	```C
+	#define LSQUIC_DF_SCID_LEN 8
+	```
+	to
+	```C
+	#define LSQUIC_DF_SCID_LEN MAX_CID_LEN
+	```
+- In `lsquic/src/liblsquic/lsquic_conn.c` create a global set of your wanted CIDs (each CID needs to be unique):
+	```C
+	static int lsquic_cid_ctr = 0;
+	char* data_buffer[10] = {
+    		"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    		"BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+    		"CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC",
+    		"DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD",
+    		"EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE",
+    		"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+    		"GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG",
+    		"HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
+    		"IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII",
+    		"JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ"
+	};
+	```
+	Furthermore change the function `lsquic_generate_cid` to something similar to:
+	```C
+	if (!len){
+    		len = 20;
+    	}
+    	//Set counter to the index used as new CID for path challenges.
+    	cid->len = len;
+    	if(lsquic_cid_ctr < 10){       
+    		memcpy(cid->idbuf, data_buffer[lsquic_cid_ctr], cid->len);
+    	}
+    	else{
+    		RAND_bytes(cid->idbuf, len);
+    	}
+    	lsquic_cid_ctr++;
+	```
+	With this the all CIDs will be of length 20 and the first 10 generated CIDs will be static.
+
 ## Usage
 
 

