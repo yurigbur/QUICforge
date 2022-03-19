@@ -1,0 +1,37 @@
+daemon off;
+
+user root;
+
+error_log /dev/stdout debug;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    access_log /dev/stdout;
+
+    ssl_certificate     /mnt/certs/ca_quicly.pem;
+    ssl_certificate_key /mnt/certs/ca.key;
+
+    # quic requires TLS 1.3
+    ssl_protocols TLSv1.2 TLSv1.3;
+    # enable 0-RTT
+    ssl_early_data on;
+    ssl_session_tickets on;
+
+    quic_initial_max_streams_bidi 100;
+
+    server {
+        server_name localhost;
+        listen *:12345 ssl;
+        listen *:12345 reuseport http3;
+        add_header Alt-Svc 'h3-29=":12345"';
+        location / {
+            root /www;
+        }
+    }
+
+    include       mime.types;
+    default_type  application/octet-stream;
+}
