@@ -21,7 +21,7 @@ If the prerequisites are met the script should run out of the box
 *Tested on Ubuntu20.04*
 - Install dependencies
 	```bash
-	sudo apt update && sudo apt install -y golang libevent-dev git cmake binutils
+	sudo apt update && sudo apt install -y golang libevent-dev libz-dev git cmake binutils
 	```
 - Setup boringssl
 	```bash
