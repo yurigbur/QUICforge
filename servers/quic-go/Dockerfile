@@ -13,7 +13,7 @@ ARG CACHEBUST=1
 
 RUN git clone https://github.com/lucas-clemente/quic-go && \
   cd quic-go \
-  && git checkout tags/v0.25.0 && \
+  && git checkout tags/v0.26.0 && \
   go get ./...
 
 WORKDIR /quic-go

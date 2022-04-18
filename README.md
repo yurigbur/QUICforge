@@ -4,17 +4,33 @@ A python attack script built on top of aioquic to perform request forgery with Q
 
 ## Prerequisites
 
-- Python3 (>3.8)
-- Aioquic (>0.9.17)
+- Python3 (3.8)
+- Aioquic (0.9.20)
 	1. Pull aioquic 
 	2. Checkout a compatible version
 	3. Apply the aioquic.diff
 	4. Follow the install instructions of aioquic
-- Wireshark (>3.5.0) (Optional)
+- Lsquic (3.0.4) (For legacy support, needed for CMRF)
+- Wireshark (3.5.0) (Optional)
 
 ## Installation / Setup
 
-If the prerequisites are met the script should run out of the box
+If the prerequisites are met the script should run out of the box. The described installation instructions are likely going to change in the future. If the setup instructions fail, please consult the official documentation of the respective software.
+
+### Installation of aioquic
+
+- Install dependencies
+	```bash
+	apt-get update && apt-get install -y git-core libssl-dev python3-dev python3-pip
+	pip3 install aiofiles asgiref httpbin starlette wsproto werkzeug==2.0.3
+	```
+- Clone the repository and apply the diff
+	```bash
+	git clone https://github.com/aiortc/aioquic && cd /aioquic && git checkout tags/0.9.20
+	#TODO APPLY DIFF
+	pip3 install -e .
+	```
+
 
 ### Installation of lsquic for legacy mode
 
@@ -36,6 +52,7 @@ If the prerequisites are met the script should run out of the box
 	```bash
 	git clone https://github.com/litespeedtech/lsquic.git
 	cd lsquic
+	git checkout tags/v3.0.4
 	git submodule update --init --recursive
 	cmake -DBORINGSSL_DIR=$BORINGSSL .
 	make
@@ -83,6 +100,28 @@ If the prerequisites are met the script should run out of the box
     	lsquic_cid_ctr++;
 	```
 	With this the all CIDs will be of length 20 and the first 10 generated CIDs will be static.
+
+
+### Installation of Development Wireshark (Optional)
+
+- Pull Git repository
+	```bash
+	git clone https://gitlab.com/wireshark/wireshark.git
+	cd wireshark
+	```
+- Install dependencies
+	```bash
+	sudo ./tools/debian-setup.sh --install-optional --install-deb-deps
+	```
+- Build Wireshark
+	```bash
+	mkdir build
+	cd build
+	cmake -G Ninja ../
+	ninja
+	sudo ninja install
+	```
+
 
 ## Usage
 
