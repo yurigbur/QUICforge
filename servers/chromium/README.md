@@ -1,0 +1,1 @@
+This folder does not contain all the things needed to create the docker container. Due to the size and complexity, the binary for the quic server was compiled seperately. As the build files create a dynamic binary, the libraries have to be included separately. The can be found with the `ldd` command and than placed in a folder called `libraries` that is used by the Dockerfile.
