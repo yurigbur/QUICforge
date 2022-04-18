@@ -12,7 +12,7 @@ RUN     apt-get update -y \
 
 RUN	git clone https://github.com/microsoft/msquic.git && \
 	    cd msquic && \
-	    git checkout tags/v2.0.0 && \
+	    git checkout tags/v2.0.1 && \
 	    git submodule update --init --recursive && \
 	    cd .. && mv msquic/ /src
 

@@ -9,6 +9,9 @@ fi
 #head examples/templates/index.html
 #tail examples/templates/index.html
 
+echo "Aioquic version"
+cat /git_version.txt
+
 echo "Starting server"
 python3 examples/http3_server.py \
 	--certificate /mnt/certs/ca_quicly.pem \
