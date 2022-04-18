@@ -221,7 +221,7 @@ def main():
 
         print("[+] Starting client")
         processes = []
-        if args.legacy:
+        if args.mode == 'cm' and args.legacy:
             print("[!] legacy mode")
             cmd = configure_legacy_client(args)
             print(cmd)
