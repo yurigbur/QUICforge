@@ -19,16 +19,19 @@ RUN git clone https://boringssl.googlesource.com/boringssl && \
 RUN git clone https://github.com/litespeedtech/lsquic.git && \
     cd lsquic && \
     git checkout tags/v3.0.4 && \
+    git status | head -n 1 >> /git_version.txt && git log -1 | head -n 1 >> /git_version.txt && \
     git submodule update --init && \
     cmake -DBORINGSSL_DIR=/src/boringssl . && \
     make
 
+
 FROM ubuntu:20.04
 
 COPY --from=build /src/lsquic/bin/http_server /usr/bin/
+COPY --from=build /git_version.txt /git_version.txt
 
 RUN mkdir /www 
-COPY large.html /www/index.html
+COPY large.html /www/large.html
 
 COPY run_endpoint.sh .
 RUN chmod +x run_endpoint.sh
