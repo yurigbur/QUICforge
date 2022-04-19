@@ -1,16 +1,16 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # Extra debugging ?
 set -x
 set -o nounset
 
 DRAFT=29
-HQ_CLI=/proxygen/_build/proxygen/bin/hq
+HQ_CLI=/proxygen/hq
 PORT=12345
 LOGLEVEL=2
 
 # Unless noted otherwise, test cases use HTTP/0.9 for file transfers.
-PROTOCOL="h3-29"
+PROTOCOL="h3"
 HTTPVERSION="3.0"
 
 # Default enormous flow control.
@@ -21,7 +21,8 @@ INVOCATIONS=$(echo ${REQUESTS} | tr " " "\n" | awk -F '/' '{ print "/" $4 }' | p
 EARLYDATA="false"
 PSK_FILE="" # in memory psk
 
-echo "mvfst"
+echo "mvfst version"
+cat /git_version.txt
 echo "Running QUIC server on 0.0.0.0:${PORT}"
     ${HQ_CLI} \
         --mode=server \

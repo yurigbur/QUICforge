@@ -1,41 +1,39 @@
-#
-# Full build image
-#
-FROM ubuntu:20.04 
+FROM ubuntu:20.04 as build
 
-# 19.04 repos got moved
-#RUN sed -i -re 's/([a-z]{2}\.)?archive.ubuntu.com|security.ubuntu.com/old-releases.ubuntu.com/g' /etc/apt/sources.list
+ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Berlin
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 RUN apt-get update
-
-RUN apt-get --yes --fix-missing update
 
 # Get and build proxygen with HTTP/3 support
 RUN apt-get install --yes wget net-tools iputils-ping tcpdump ethtool iperf git sudo cmake python3 libssl-dev m4 zlib1g-dev gcc g++
-RUN git clone https://github.com/facebook/proxygen.git 
-RUN cd proxygen && git checkout "tags/v2022.03.28.00" && ./getdeps.sh --no-tests 
-RUN ldd /tmp/fbcode_builder_getdeps-ZproxygenZbuildZfbcode_builder-root/build/proxygen/proxygen/httpserver/hq | grep "=> /" | awk '{print $3}' > libs.txt
-RUN tar cvf libs.tar --dereference --files-from=libs.txt
 
-#
-# Minimal image
-#
+RUN git clone https://github.com/facebook/proxygen.git && \
+    cd proxygen && \
+    git checkout "tags/v2022.04.18.00" && \
+    git status | head -n 1 >> /git_version.txt && git log -1 | head -n 1 >> /git_version.txt
+
+
+WORKDIR /proxygen/proxygen
+RUN ./build.sh --with-quic
+
+RUN ldd _build/proxygen/httpserver/hq | grep "=> /" | awk '{print $3}' > libs.txt
+RUN tar cvf /libs.tar --dereference --files-from=libs.txt
+
+
 FROM ubuntu:20.04 
-# copy run script
-COPY run_endpoint.sh .
-RUN chmod +x run_endpoint.sh
 
-# Copy HQ
-COPY --from=0 /tmp/fbcode_builder_getdeps-ZproxygenZbuildZfbcode_builder-root/build/proxygen/proxygen/httpserver/hq /proxygen/_build/proxygen/bin/hq
-# Copy shared libs
-COPY --from=0 libs.tar /
+COPY --from=build /proxygen/proxygen/_build/proxygen/httpserver/hq /proxygen/hq
+COPY --from=build libs.tar /
+COPY --from=build /git_version.txt /git_version.txt
+
 RUN tar xvf libs.tar
 RUN rm libs.tar
-# Create the logs directory
+
 RUN mkdir /logs
 
 RUN mkdir /www 
 COPY large.html /www/index.html
 
+COPY run_endpoint.sh .
+RUN chmod +x run_endpoint.sh
 ENTRYPOINT [ "./run_endpoint.sh" ]
