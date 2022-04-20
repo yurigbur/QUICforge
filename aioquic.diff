@@ -1,0 +1,84 @@
+diff --git a/src/aioquic/quic/configuration.py b/src/aioquic/quic/configuration.py
+index 5da3cbb..9121967 100644
+--- a/src/aioquic/quic/configuration.py
++++ b/src/aioquic/quic/configuration.py
+@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
+ from os import PathLike
+ from re import split
+ from typing import Any, List, Optional, TextIO, Union
++from wsgiref.simple_server import WSGIRequestHandler
+ 
+ from ..tls import (
+     CipherSuite,
+@@ -24,11 +25,21 @@ class QuicConfiguration:
+     A list of supported ALPN protocols.
+     """
+ 
+-    connection_id_length: int = 8
++    connection_id_length: int = 20
+     """
+     The length in bytes of local connection IDs.
+     """
+ 
++    init_dcid: Optional[bytes] = b"A" * connection_id_length
++    """
++    Initial DCID for VNRF payloads
++    """
++
++    init_scid: Optional[bytes] = b"B" * connection_id_length
++    """
++    Initial SCID for VNRF payloads
++    """
++
+     idle_timeout: float = 60.0
+     """
+     The idle timeout in seconds.
+@@ -92,6 +103,7 @@ class QuicConfiguration:
+             QuicProtocolVersion.DRAFT_31,
+             QuicProtocolVersion.DRAFT_30,
+             QuicProtocolVersion.DRAFT_29,
++            QuicProtocolVersion.VNRF,
+         ]
+     )
+     verify_mode: Optional[int] = None
+diff --git a/src/aioquic/quic/connection.py b/src/aioquic/quic/connection.py
+index 4f5f1f0..c7a0821 100644
+--- a/src/aioquic/quic/connection.py
++++ b/src/aioquic/quic/connection.py
+@@ -274,9 +274,11 @@ class QuicConnection:
+         self._events: Deque[events.QuicEvent] = deque()
+         self._handshake_complete = False
+         self._handshake_confirmed = False
++        # Initial SCID
+         self._host_cids = [
+             QuicConnectionId(
+-                cid=os.urandom(configuration.connection_id_length),
++                #cid=os.urandom(configuration.connection_id_length),
++                cid = configuration.init_scid,
+                 sequence_number=0,
+                 stateless_reset_token=os.urandom(16) if not self._is_client else None,
+                 was_sent=True,
+@@ -308,8 +310,10 @@ class QuicConnection:
+         self._pacing_at: Optional[float] = None
+         self._packet_number = 0
+         self._parameters_received = False
++        # Intial DCID
+         self._peer_cid = QuicConnectionId(
+-            cid=os.urandom(configuration.connection_id_length), sequence_number=None
++            # cid=os.urandom(configuration.connection_id_length), sequence_number=None
++            cid = configuration.init_dcid, sequence_number=None
+         )
+         self._peer_cid_available: List[QuicConnectionId] = []
+         self._peer_cid_sequence_numbers: Set[int] = set([0])
+diff --git a/src/aioquic/quic/packet.py b/src/aioquic/quic/packet.py
+index 60c639b..0ac05d8 100644
+--- a/src/aioquic/quic/packet.py
++++ b/src/aioquic/quic/packet.py
+@@ -58,6 +58,7 @@ class QuicProtocolVersion(IntEnum):
+     DRAFT_30 = 0xFF00001E
+     DRAFT_31 = 0xFF00001F
+     DRAFT_32 = 0xFF000020
++    VNRF = 0x13371337
+ 
+ 
+ @dataclass

