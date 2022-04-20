@@ -154,5 +154,10 @@ More information about the attack script can be viewed with:
 sudo python3 request_forgery.py -h
 ```
 
+## FAQ
+**Why is this code so ugly?**
+This code developed over time from a little proof of concept script created during my master thesis. It was not planned to be publicly released and just created to proof the general possiblity of the attacks. Features where not initially planned and added on top with as little effort as possible. If you have nicer solutions (especially for the multithreading), feel free to share and contribute.
 
+**Why did you not inlude ATS, Quant, PQUIC, ...?**
+I chose open source projects that were functional at the time for the scenarios I neede them for. If an implementation is missing it was likely buggy or not listed on the quic working group's github. Also projects that were not maintained for over a year and not supporting the current versions were dropped. 
 
