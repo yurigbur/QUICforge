@@ -9,7 +9,7 @@ RUN apt-get update && \
 ARG CACHEBUST=1
 RUN git clone https://github.com/h2o/quicly.git && \
     cd quicly &&  \
-    git pull && \
+    git status | head -n 1 >> /git_version.txt && git log -1 | head -n 1 >> /git_version.txt && \
     git submodule update --init --recursive && \
     cmake . && \
     make
@@ -22,6 +22,7 @@ RUN apt-get update && \
   apt-get install -y libssl-dev net-tools
 
 COPY --from=builder /quicly/cli quicly/cli
+COPY --from=builder /git_version.txt /git_version.txt
 
 RUN mkdir /www
 COPY large.html /www/index.html

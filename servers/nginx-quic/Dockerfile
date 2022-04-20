@@ -22,7 +22,9 @@ RUN  cd boringssl  && \
 
 RUN touch 'boringssl/.openssl/include/openssl/ssl.h'
 
-RUN hg clone http://hg.nginx.org/nginx-quic && cd nginx-quic && hg checkout release-1.21.6 && hg update 'quic'
+RUN hg clone http://hg.nginx.org/nginx-quic && cd nginx-quic && hg checkout release-1.21.6 && hg update 'quic' && \
+    hg identify -b >> /git_version.txt && hg log -l 1 | head -n 1 >> /git_version.txt
+
 
 RUN cd nginx-quic && \
     ./auto/configure --prefix=/etc/nginx \
@@ -59,11 +61,12 @@ FROM ubuntu:20.04
  
 COPY --from=builder /usr/sbin/nginx /usr/sbin/
 COPY --from=builder /etc/nginx /etc/nginx
+COPY --from=builder /git_version.txt /git_version.txt
 
 RUN useradd nginx
 RUN mkdir -p /var/cache/nginx /var/log/nginx/
 
-COPY nginx.conf nginx.conf.retry nginx.conf.http3 /etc/nginx/
+COPY nginx.conf.http3 /etc/nginx/
 
 RUN mkdir /www 
 COPY large.html  /www/index.html

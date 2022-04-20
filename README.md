@@ -5,6 +5,7 @@ A python attack script built on top of aioquic to perform request forgery with Q
 ## Prerequisites
 
 - Python3 (3.8)
+- NetfilterQueue and ScaPY
 - Aioquic (0.9.20)
 	1. Pull aioquic 
 	2. Checkout a compatible version
@@ -16,6 +17,14 @@ A python attack script built on top of aioquic to perform request forgery with Q
 ## Installation / Setup
 
 If the prerequisites are met the script should run out of the box. The described installation instructions are likely going to change in the future. If the setup instructions fail, please consult the official documentation of the respective software.
+
+### Install NetfilterQueue and ScaPY
+
+```bash
+sudo apt install build-essential python-dev libnetfilter-queue-dev
+sudo pip install https://github.com/johnteslade/python-netfilterqueue/archive/refs/heads/update-cython-code.zip
+sudo pip install scapy 
+```
 
 ### Installation of aioquic
 
@@ -124,5 +133,25 @@ If the prerequisites are met the script should run out of the box. The described
 
 
 ## Usage
+
+### Generate Certificates
+*Some need other formats*
+```bash
+openssl req -x509 -nodes -newkey rsa:4096 -keyout <name>.key -out <name>.pem -days 365
+```
+
+### Use the server docker containers
+```bash
+sudo docker run -p 12345:12345/udp -v </path/to/certs/>:/mnt/certs/ -v </tls/keys/output/>:/mnt/keys -it --rm <containername>
+```
+
+
+### Use the attack script
+More information about the attack script can be viewed with:
+
+```bash
+sudo python3 request_forgery.py -h
+```
+
 
 

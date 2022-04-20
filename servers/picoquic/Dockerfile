@@ -8,7 +8,9 @@ RUN apt-get update && \
 RUN mkdir /src
 WORKDIR /src
 
-RUN git clone https://github.com/private-octopus/picoquic.git 
+RUN git clone https://github.com/private-octopus/picoquic.git && \
+    git status | head -n 1 >> /git_version.txt && git log -1 | head -n 1 >> /git_version.txt
+
 
 # Perl stuff is for the picotls test code
 RUN echo install Test::TCP | perl -MCPAN -

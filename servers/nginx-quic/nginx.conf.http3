@@ -14,21 +14,15 @@ http {
     ssl_certificate     /mnt/certs/ca_quicly.pem;
     ssl_certificate_key /mnt/certs/ca.key;
 
-    # quic requires TLS 1.3
-    ssl_protocols TLSv1.2 TLSv1.3;
-    # enable 0-RTT
-    ssl_early_data on;
-    ssl_session_tickets on;
-
-    quic_initial_max_streams_bidi 100;
+    ssl_protocols TLSv1.3;
 
     server {
         server_name localhost;
         listen *:12345 ssl;
         listen *:12345 reuseport http3;
-        add_header Alt-Svc 'h3-29=":12345"';
         location / {
             root /www;
+            add_header Alt-Svc 'h3=":12345"';
         }
     }
 

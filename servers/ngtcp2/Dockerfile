@@ -12,7 +12,7 @@ RUN git clone --depth 1 -b OpenSSL_1_1_1k+quic https://github.com/quictls/openss
     
 RUN git clone https://github.com/ngtcp2/nghttp3 && \
     cd nghttp3 && \
-    git checkout tags/v0.2.0 && \
+    git checkout tags/v0.3.0 && \
     autoreconf -i && \
     ./configure --enable-lib-only \
         LDFLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined" \
@@ -21,14 +21,15 @@ RUN git clone https://github.com/ngtcp2/nghttp3 && \
     
 RUN git clone https://github.com/ngtcp2/ngtcp2 && \
     cd ngtcp2 && \
-    git checkout tags/v0.2.1 && \
+    git checkout tags/v0.3.1 && \
+    git status | head -n 1 >> /git_version.txt && git log -1 | head -n 1 >> /git_version.txt && \
     autoreconf -i && \
     ./configure \
         CXXFLAGS=-DNGTCP2_ENABLE_UDP_GSO=0 \
         LDFLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined" \
         CPPFLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined -g3" && \
     make -j$(nproc) && make install && \
-    cp examples/server examples/client examples/h09server examples/h09client /usr/local/bin && \
+    cp examples/server /usr/local/bin && \
     cd .. && \
     rm -rf ngtcp2 && \
     rm -rf /usr/local/lib/libssl.so /usr/local/lib/libcrypto.so /usr/local/lib/libssl.a /usr/local/lib/libcrypto.a /usr/local/lib/pkgconfig/*ssl.pc /usr/local/include/openssl/*
